@@ -1,6 +1,6 @@
 SHELL := bash
 .PHONY: all configure build clean wasm emsdk-install test \
-        npm-install format format-check coverage install-hooks
+        npm-install format format-check coverage install-hooks publish
 
 BUILD_DIR      := build
 WASM_BUILD_DIR := build-wasm
@@ -77,6 +77,15 @@ coverage: npm-install wasm
 	npx c8 --reporter=html --reporter=text \
 	    --report-dir=coverage/report \
 	    node test/unit/smoke-test.mjs
+
+# ── Publishing ────────────────────────────────────────────────────────────────
+# Override the target registry for a manual publish, e.g.:
+#   make publish REGISTRY=https://registry.npmjs.org
+
+REGISTRY :=
+
+publish: wasm
+	npm publish $(if $(REGISTRY),--registry=$(REGISTRY))
 
 # ── Git hooks ─────────────────────────────────────────────────────────────────
 

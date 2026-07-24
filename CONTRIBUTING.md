@@ -107,6 +107,81 @@ Formatter configs:
 For changes to the core geometry library (TwkPaint, TwkMath), please open a
 pull request in that repository instead.
 
+## Releasing
+
+Publishing to NPM is automated via `.github/workflows/publish.yml`, which runs
+`make publish` whenever a tag matching `vX.Y.Z` is pushed. To cut a release:
+
+1. Bump the `version` field in `package.json` to `X.Y.Z`.
+2. Commit and merge that change to `main`.
+3. Tag the merge commit and push the tag:
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The workflow verifies the tag matches `package.json`'s version before
+publishing, so a mismatched tag fails the run instead of publishing the
+wrong version.
+
+### Setting up your local environment to publish automatically
+
+The package is scoped (`@aswf/openrv-annotation-wasm`), so npm lets you
+pin that scope to the right registry once, in your user-level `~/.npmrc`,
+instead of passing `REGISTRY` on every `make publish`:
+
+```
+@aswf:registry=https://registry.npmjs.org
+//registry.npmjs.org/:_authToken=<your-token>
+```
+
+With that in place, a plain `make publish` (no `REGISTRY` override) resolves
+the `@aswf` scope to the configured registry automatically, and
+authenticates using the stored token.
+
+### Publishing manually to a specific registry
+
+`make publish` normally publishes to whatever registry is configured in your
+local npm setup. To target a different registry (e.g. the public npm
+registry instead of a private mirror), pass `REGISTRY`:
+
+```bash
+make publish REGISTRY=https://registry.npmjs.org
+```
+
+### Recovering from a version mismatch
+
+If the version-check step fails, the job stops before `make publish` runs, so
+nothing is published to NPM — it's safe to fix and retry.
+
+1. Figure out which one was wrong: the tag or `package.json`.
+2. **If `package.json` was wrong** (you forgot to bump it): delete the bad
+   tag, fix the version, commit, then re-tag.
+   ```bash
+   git tag -d vX.Y.Z
+   git push origin :refs/tags/vX.Y.Z   # delete remote tag
+   # bump package.json version to X.Y.Z, commit, push to main
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+3. **If the tag was wrong** (e.g. you tagged the wrong version number): just
+   delete it and re-tag with the correct one — no code change needed.
+   ```bash
+   git tag -d vBadTag
+   git push origin :refs/tags/vBadTag
+   git tag vCorrectTag
+   git push origin vCorrectTag
+   ```
+
+Pushing the tag again re-triggers the workflow, which re-runs the version
+check and, if it now matches, proceeds to build and publish.
+
+Note: if a version was already successfully published to NPM before you
+noticed a mismatch on a different tag, that version can't be republished —
+NPM rejects republishing an identical version. Since the version check runs
+before publish, a rejected run never reaches NPM, so this shouldn't arise
+from this workflow alone.
+
 ## Bug reports and feature requests
 
 Please open a [GitHub Issue](https://github.com/AcademySoftwareFoundation/OpenRV-annotation-wasm/issues).
