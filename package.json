@@ -1,9 +1,13 @@
 {
   "name": "@autodesk/openrv-annotation-wasm",
-  "version": "0.2.5",
-  "main": "./dist/annotation_platform.js",
+  "version": "0.3.0",
+  "main": "./dist/annotation_platform.cjs.js",
   "exports": {
-    ".": "./dist/annotation_platform.js",
+    ".": {
+      "import": "./dist/annotation_platform.esm.mjs",
+      "require": "./dist/annotation_platform.cjs.js",
+      "default": "./dist/annotation_platform.cjs.js"
+    },
     "./brushes/*": "./deps/OpenRV-annotation/assets/brushes/*",
     "./shaders/*": "./deps/OpenRV-annotation/assets/shaders/*"
   },
