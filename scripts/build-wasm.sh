@@ -23,4 +23,8 @@ emcmake cmake -B "$WASM_BUILD_DIR" -G Ninja
 cmake --build "$WASM_BUILD_DIR"
 
 echo ""
-echo "Done. WASM artifact: $WASM_BUILD_DIR/bindings/wasm/annotation_platform.js"
+echo "Done. WASM artifacts:"
+echo "  CJS: $WASM_BUILD_DIR/bindings/wasm/annotation_platform.cjs.js"
+echo "  ESM: $WASM_BUILD_DIR/bindings/wasm/annotation_platform.esm.mjs"
+echo "run 'npm run build' to build the package"
+echo "run 'npm run test' to run the tests"

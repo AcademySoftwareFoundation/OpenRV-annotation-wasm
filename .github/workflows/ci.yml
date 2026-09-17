@@ -19,6 +19,8 @@ jobs:
 
       - name: Set up Emscripten
         uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021 # v14
+        with:
+          version: '3.1.50' # same as in Makefile
 
       - name: Set up Node.js
         uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0

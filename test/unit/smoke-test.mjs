@@ -1,328 +1,64 @@
 #!/usr/bin/env node
-// Smoke tests for the annotation_platform WASM artifact.
+// Smoke tests for the annotation_platform WASM artifacts (CJS + ESM).
 // Run after `make wasm`: node test/unit/smoke-test.mjs
 
+import { createRequire } from 'module';
+import fs from 'fs';
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { assertModuleFormat, assertNoModernOperators } from './assert-no-modern-operators.mjs';
+import { runWasmSmokeTests } from './wasm-smoke-core.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const artifactPath = path.join(
-    __dirname,
-    '..',
-    '..',
-    'build-wasm',
-    'bindings',
-    'wasm',
-    'annotation_platform.js',
-);
+const wasmDir = path.join(__dirname, '..', '..', 'build-wasm', 'bindings', 'wasm');
+const cjsPath = path.join(wasmDir, 'annotation_platform.cjs.js');
+const esmPath = path.join(wasmDir, 'annotation_platform.esm.mjs');
 
-const { default: AnnotationPlatform } = await import(pathToFileURL(artifactPath).href);
-
-AnnotationPlatform().then((Module) => {
-    let passed = 0;
-    let failed = 0;
-
-    function check(name, condition) {
-        if (condition) {
-            console.log(`  ✓ ${name}`);
-            passed++;
-        } else {
-            console.error(`  ✗ ${name}`);
-            failed++;
+function checkArtifactsExist() {
+    for (const artifactPath of [cjsPath, esmPath]) {
+        if (!fs.existsSync(artifactPath)) {
+            console.error(`Missing WASM artifact: ${artifactPath}`);
+            console.error('Run `make wasm` first.');
+            process.exit(1);
         }
     }
+}
 
-    function section(title) {
-        console.log(`\n${title}:`);
-    }
+function checkSyntaxAndFormat() {
+    console.log('Syntax and module format:');
+    const cjsSource = fs.readFileSync(cjsPath, 'utf8');
+    const esmSource = fs.readFileSync(esmPath, 'utf8');
 
-    // Validate that all triangle indices are within the vertex array bounds.
-    function indicesInBounds(vertices, indices) {
-        const nVerts = vertices.length / 2;
-        for (let i = 0; i < indices.length; i++) {
-            if (indices[i] >= nVerts) return false;
-        }
-        return true;
-    }
+    assertNoModernOperators(cjsSource, 'CJS build');
+    assertNoModernOperators(esmSource, 'ESM build');
+    assertModuleFormat(cjsSource, 'CJS build', 'cjs');
+    assertModuleFormat(esmSource, 'ESM build', 'esm');
 
-    // Compute axis-aligned bounding box of a flat [x,y,x,y,...] vertex array.
-    function bbox(verts) {
-        let minX = Infinity,
-            minY = Infinity,
-            maxX = -Infinity,
-            maxY = -Infinity;
-        for (let i = 0; i < verts.length; i += 2) {
-            minX = Math.min(minX, verts[i]);
-            maxX = Math.max(maxX, verts[i]);
-            minY = Math.min(minY, verts[i + 1]);
-            maxY = Math.max(maxY, verts[i + 1]);
-        }
-        return { minX, minY, maxX, maxY };
-    }
+    console.log('  ✓ CJS: no forbidden operators, CommonJS format');
+    console.log('  ✓ ESM: no forbidden operators, ESM format');
+}
 
-    // ── Enums ────────────────────────────────────────────────────────────────
-
-    section('Enums');
-    check('JoinStyle.None exists', Module.JoinStyle.None !== undefined);
-    check('JoinStyle.Bevel exists', Module.JoinStyle.Bevel !== undefined);
-    check('JoinStyle.Miter exists', Module.JoinStyle.Miter !== undefined);
-    check('JoinStyle.Round exists', Module.JoinStyle.Round !== undefined);
-    check('CapStyle.Flat exists', Module.CapStyle.Flat !== undefined);
-    check('CapStyle.Square exists', Module.CapStyle.Square !== undefined);
-    check('CapStyle.Round exists', Module.CapStyle.Round !== undefined);
-
-    // ── StrokeBuilder: output types ──────────────────────────────────────────
-
-    section('StrokeBuilder output types (3 points, round join/cap)');
-    const stroke = new Module.StrokeBuilder();
-    stroke.addPoint(0.0, 0.0, 0.01);
-    stroke.addPoint(0.5, 0.5, 0.01);
-    stroke.addPoint(1.0, 0.0, 0.01);
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-
-    const verts = stroke.getVertices();
-    const indices = stroke.getIndices();
-    const texCoords = stroke.getTexCoords();
-    check('vertices is Float32Array', verts instanceof Float32Array);
-    check('indices is Uint32Array', indices instanceof Uint32Array);
-    check('texCoords is Float32Array', texCoords instanceof Float32Array);
-    check('vertex count > 0', verts.length > 0);
-    check('vertex count is even (x,y pairs)', verts.length % 2 === 0);
-    check('index count > 0', indices.length > 0);
-    check('index count divisible by 3', indices.length % 3 === 0);
-    check('texCoords length matches vertices', texCoords.length === verts.length);
-    check('all indices within vertex bounds', indicesInBounds(verts, indices));
-
-    // ── StrokeBuilder: geometry per join/cap combination ─────────────────────
-
-    section('StrokeBuilder: all join × cap combinations');
-    const joinStyles = ['None', 'Bevel', 'Miter', 'Round'];
-    const capStyles = ['Flat', 'Square', 'Round'];
-    for (const joinName of joinStyles) {
-        for (const capName of capStyles) {
-            stroke.clear();
-            stroke.addPoint(0.0, 0.0, 0.01);
-            stroke.addPoint(0.5, 0.5, 0.01);
-            stroke.addPoint(1.0, 0.0, 0.01);
-            stroke.computeGeometry(Module.JoinStyle[joinName], Module.CapStyle[capName], false);
-            const v = stroke.getVertices();
-            const idx = stroke.getIndices();
-            check(`${joinName}/${capName}: non-empty output`, v.length > 0 && idx.length > 0);
-            check(`${joinName}/${capName}: indices within bounds`, indicesInBounds(v, idx));
-            check(`${joinName}/${capName}: index count divisible by 3`, idx.length % 3 === 0);
-        }
-    }
-
-    // ── StrokeBuilder: vertex bounds ─────────────────────────────────────────
-
-    section('StrokeBuilder: vertex bounding box');
-    stroke.clear();
-    stroke.addPoint(0.1, 0.2, 0.01);
-    stroke.addPoint(0.5, 0.8, 0.01);
-    stroke.addPoint(0.9, 0.2, 0.01);
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-    {
-        const b = bbox(stroke.getVertices());
-        const margin = 0.05; // allow for cap/join geometry extending slightly beyond input
-        check('vertices within expected x range', b.minX >= 0.1 - margin && b.maxX <= 0.9 + margin);
-        check('vertices within expected y range', b.minY >= 0.2 - margin && b.maxY <= 0.8 + margin);
-    }
-
-    // ── StrokeBuilder: edge cases ────────────────────────────────────────────
-
-    section('StrokeBuilder: edge cases');
-
-    // A single point is rendered as a stamp (dot) — geometry IS produced.
-    stroke.clear();
-    stroke.addPoint(0.0, 0.0, 0.01);
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-    check('single point: produces stamp geometry', stroke.getVertices().length > 0);
-    check('single point: indices valid', stroke.getIndices().length % 3 === 0);
-
-    stroke.clear();
-    stroke.addPoint(0.0, 0.0, 0.01);
-    stroke.addPoint(1.0, 0.0, 0.01);
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-    check('two points: produces geometry', stroke.getVertices().length > 0);
-
-    // Many points
-    stroke.clear();
-    const N = 30;
-    for (let i = 0; i < N; i++) {
-        const t = i / (N - 1);
-        stroke.addPoint(t, 0.5 * Math.sin(t * Math.PI * 2), 0.01);
-    }
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-    const manyVerts = stroke.getVertices();
-    const manyIdx = stroke.getIndices();
-    check('many points: non-empty geometry', manyVerts.length > 0);
-    check('many points: indices within bounds', indicesInBounds(manyVerts, manyIdx));
-
-    // ── StrokeBuilder: soft pen (directionalities) ───────────────────────────
-
-    section('StrokeBuilder: soft pen');
-    stroke.clear();
-    stroke.addPoint(0.0, 0.0, 0.01);
-    stroke.addPoint(0.5, 0.5, 0.01);
-    stroke.addPoint(1.0, 0.0, 0.01);
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, true);
-    {
-        const dirs = stroke.getDirectionalities();
-        check('directionalities non-empty for soft pen', dirs.length > 0);
-        check(
-            'directionalities length matches vertices',
-            dirs.length * 2 === stroke.getVertices().length,
-        );
-        const allFinite = Array.from(dirs).every((v) => isFinite(v));
-        check('directionalities are all finite', allFinite);
-    }
-
-    // ── StrokeBuilder: clear resets state ────────────────────────────────────
-
-    section('StrokeBuilder: clear()');
-    stroke.clear();
-    stroke.computeGeometry(Module.JoinStyle.Round, Module.CapStyle.Round, false);
-    check('after clear(), vertices are empty', stroke.getVertices().length === 0);
-    check('after clear(), indices are empty', stroke.getIndices().length === 0);
-
-    // ── InputSmoother ────────────────────────────────────────────────────────
-
-    section('InputSmoother: default params');
-    const smoother = new Module.InputSmoother();
-    smoother.addPoint(0.0, 0.0);
-    const pts0 = smoother.getSmoothedPoints();
-    check('getSmoothedPoints() returns Float32Array', pts0 instanceof Float32Array);
-    check('first point yields 0 smoothed samples (cold-start)', pts0.length === 0);
-
-    smoother.addPoint(0.1, 0.1);
-    smoother.addPoint(0.2, 0.2);
-    smoother.addPoint(0.3, 0.3);
-    smoother.addPoint(0.4, 0.4);
-    smoother.addPoint(0.5, 0.5);
-    const pts5 = smoother.getSmoothedPoints();
-    check('multiple points: smoothed output non-empty', pts5.length > 0);
-    check('smoothed point count is even (x,y pairs)', pts5.length % 2 === 0);
-    check(
-        'smoothed values are all finite',
-        Array.from(pts5).every((v) => isFinite(v)),
-    );
-    check(
-        'smoothed values are in expected range (0..0.7)',
-        Array.from(pts5).every((v) => v >= -0.1 && v <= 0.7),
-    );
-    console.log(`  (${pts5.length / 2} smoothed points from last addPoint)`);
-
-    section('InputSmoother: reset()');
-    smoother.reset();
-    smoother.addPoint(1.0, 1.0);
-    check(
-        'after reset, first point again yields 0 samples',
-        smoother.getSmoothedPoints().length === 0,
-    );
-    smoother.addPoint(1.1, 1.1);
-    check('after reset, second point produces output', smoother.getSmoothedPoints().length > 0);
-
-    section('InputSmoother: custom params');
-    const smootherCustom = new Module.InputSmoother(0.8, 0.9, 4, 1);
-    smootherCustom.addPoint(0.0, 0.0);
-    smootherCustom.addPoint(1.0, 1.0);
-    smootherCustom.addPoint(2.0, 0.0);
-    const ptsCustom = smootherCustom.getSmoothedPoints();
-    check('custom-param smoother produces output', ptsCustom.length > 0);
-    check(
-        'custom-param output values are all finite',
-        Array.from(ptsCustom).every((v) => isFinite(v)),
-    );
-    smootherCustom.delete();
-
-    // ── StampPlacer ──────────────────────────────────────────────────────────
-
-    section('StampPlacer: default params');
-    const placer = new Module.StampPlacer();
-
-    placer.addPoint(0.0, 0.0);
-    check('first point yields no stamps (cold start)', placer.getStampCount() === 0);
-
-    placer.addPoint(1.0, 0.0, -1, -1, -1, -1);
-    const stamps0 = placer.getStamps();
-    check('getStamps() returns Float32Array', stamps0 instanceof Float32Array);
-    check('stamps produced on second point', placer.getStampCount() > 0);
-    check(
-        'getStamps() length is 6 × getStampCount()',
-        stamps0.length === placer.getStampCount() * 6,
-    );
-    check(
-        'stamp values are all finite',
-        Array.from(stamps0).every((v) => isFinite(v)),
-    );
-    check(
-        'stamp x positions lie along segment [0..1]',
-        Array.from({ length: placer.getStampCount() }, (_, i) => stamps0[i * 6]).every(
-            (x) => x >= -0.01 && x <= 1.01,
-        ),
-    );
-    check(
-        'stamp y positions are ~0 (horizontal segment)',
-        Array.from({ length: placer.getStampCount() }, (_, i) => stamps0[i * 6 + 1]).every(
-            (y) => Math.abs(y) < 1e-4,
-        ),
-    );
-
-    section('StampPlacer: reset()');
-    placer.reset();
-    placer.addPoint(0.0, 0.0);
-    check('after reset, first point again yields no stamps', placer.getStampCount() === 0);
-    placer.addPoint(1.0, 0.0, -1, -1, -1, -1);
-    check('after reset, second point produces stamps', placer.getStampCount() > 0);
-
-    section('StampPlacer: custom params');
-    const placerCustom = new Module.StampPlacer(
-        /*radius*/ 0.05,
-        /*opacity*/ 0.8,
-        /*angle*/ 0.0,
-        /*squish*/ 1.0,
-        /*spacing*/ 0.1,
-        /*spacingBias*/ 1.0,
-        /*spacingJitter*/ 0.0,
-        /*opacityJitter*/ 0.0,
-        /*radiusJitter*/ 0.0,
-        /*rotationJitter*/ 0.0,
-        /*rotateToStroke*/ false,
-    );
-    placerCustom.addPoint(0.0, 0.0);
-    placerCustom.addPoint(1.0, 0.0, -1, -1, -1, -1);
-    const stampsCustom = placerCustom.getStamps();
-    check('custom-param placer produces stamps', placerCustom.getStampCount() > 0);
-    check(
-        'custom stamp radii match param',
-        Array.from(
-            { length: placerCustom.getStampCount() },
-            (_, i) => stampsCustom[i * 6 + 2],
-        ).every((r) => Math.abs(r - 0.05) < 1e-5),
-    );
-    check(
-        'custom stamp opacities match param',
-        Array.from(
-            { length: placerCustom.getStampCount() },
-            (_, i) => stampsCustom[i * 6 + 3],
-        ).every((o) => Math.abs(o - 0.8) < 1e-5),
-    );
-    placerCustom.delete();
-
-    // ── Memory management ────────────────────────────────────────────────────
-
-    section('Memory management');
-    placer.delete();
-    check('placer.delete() does not throw', true);
-    smoother.delete();
-    check('smoother.delete() does not throw', true);
-    stroke.delete();
-    check('stroke.delete() does not throw', true);
-
-    // ── Summary ──────────────────────────────────────────────────────────────
-
+async function runRuntimeSmoke(label, loadFactory) {
+    console.log(`\nRuntime smoke (${label}):`);
+    const AnnotationPlatform = await loadFactory();
+    const Module = await AnnotationPlatform();
+    const { passed, failed } = runWasmSmokeTests(Module);
     const total = passed + failed;
-    console.log(`\n${total} checks: ${passed} passed, ${failed} failed.\n`);
-    process.exit(failed > 0 ? 1 : 0);
-});
+    console.log(`\n${label}: ${total} checks: ${passed} passed, ${failed} failed.`);
+    return failed;
+}
+
+checkArtifactsExist();
+checkSyntaxAndFormat();
+
+const require = createRequire(import.meta.url);
+
+const cjsFailures = await runRuntimeSmoke('CJS', async () => require(cjsPath));
+
+const { default: AnnotationPlatformEsm } = await import(pathToFileURL(esmPath).href);
+const esmFailures = await runRuntimeSmoke('ESM', async () => AnnotationPlatformEsm);
+
+const totalFailed = cjsFailures + esmFailures;
+console.log(`\nOverall: ${totalFailed === 0 ? 'all passed' : `${totalFailed} check(s) failed`}.\n`);
+process.exit(totalFailed > 0 ? 1 : 0);

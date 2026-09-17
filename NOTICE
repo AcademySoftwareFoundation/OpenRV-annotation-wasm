@@ -3,7 +3,8 @@ components that are not licensed under Apache 2.0.
 
 Imath
 
-The compiled WebAssembly artifact (dist/annotation_platform.js) incorporates
+The compiled WebAssembly artifacts (dist/annotation_platform.cjs.js and
+dist/annotation_platform.esm.mjs) incorporate
 Imath, which is licensed under the BSD 3-Clause License:
 
 Copyright Contributors to the OpenEXR Project. All rights reserved.

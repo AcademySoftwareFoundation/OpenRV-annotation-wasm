@@ -4,7 +4,7 @@ OpenRV-annotation-wasm provides WebAssembly bindings and a TypeScript-typed npm
 package for [OpenRV-annotation](https://github.com/AcademySoftwareFoundation/OpenRV-annotation),
 the C++ annotation geometry library. It exposes annotation path geometry, input
 smoothing, and stamp placement as inputs to a renderer of your choice, via
-Emscripten/Embind.
+Emscripten/Embind. Additionally GLSL shaders and brush tip PNGs are also part of the package.
 
 ## Prerequisites
 
@@ -53,15 +53,29 @@ make emsdk-install
 
 This clones emsdk into `emsdk/` and activates the pinned version (`3.1.50`).
 The `emsdk/` directory is gitignored. Run once per clone. If you already have
-Emscripten installed globally, ensure `emcmake` is in your PATH and skip this.
+Emscripten installed globally it is advised not to use it, use the local `emsdk/`
+to ensure JS source compatibility.
 
 ## Building
 
-**WASM artifact** (what browser consumers import):
+**WASM artifacts** (what browser consumers import):
 
 ```bash
 make wasm
-# Output: build-wasm/bindings/wasm/annotation_platform.js
+# Output:
+#   build-wasm/bindings/wasm/annotation_platform.cjs.js  (CommonJS — webpack 4 / require)
+#   build-wasm/bindings/wasm/annotation_platform.esm.mjs  (ES module — modern bundlers)
+```
+
+Link flags include `MIN_*_VERSION` browser targets so Emscripten transpiles modern
+operators (`??`, `?.`, etc.) out of the glue code for older bundlers.
+
+Copy into `dist/` for npm publish:
+
+```bash
+npm run build
+#   dist/annotation_platform.cjs.js
+#   dist/annotation_platform.esm.mjs
 ```
 
 **Native build** (for local development — no Emscripten needed):
@@ -128,7 +142,9 @@ git add deps/OpenRV-annotation && git commit -m "Update OpenRV-annotation submod
 Generates triangle geometry from a sequence of input points.
 
 ```javascript
-import AnnotationPlatform from './annotation_platform.js';
+// ESM: import from dist/annotation_platform.esm.mjs (or package "import" export)
+// CJS: require('@autodesk/openrv-annotation-wasm') resolves dist/annotation_platform.cjs.js
+import AnnotationPlatform from './dist/annotation_platform.esm.mjs';
 
 const Module = await AnnotationPlatform();
 const stroke = new Module.StrokeBuilder();

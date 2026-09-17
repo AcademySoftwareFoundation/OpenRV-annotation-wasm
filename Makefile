@@ -5,7 +5,7 @@ SHELL := bash
 BUILD_DIR      := build
 WASM_BUILD_DIR := build-wasm
 EMSDK_DIR      := emsdk
-EMSDK_VERSION  := 3.1.50
+EMSDK_VERSION  := 3.1.50 # needs to be the same as in ci.yml
 
 # Sentinel file so npm-install only reruns when package.json changes.
 NODE_SENTINEL  := node_modules/.package-lock.json
