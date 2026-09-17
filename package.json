@@ -8,13 +8,11 @@
       "require": "./dist/annotation_platform.cjs.js",
       "default": "./dist/annotation_platform.cjs.js"
     },
-    "./brushes/*": "./deps/OpenRV-annotation/assets/brushes/*",
-    "./shaders/*": "./deps/OpenRV-annotation/assets/shaders/*"
+    "./assets/*": "./deps/OpenRV-annotation/assets/*"
   },
   "files": [
     "annotation_platform.d.ts",
-    "deps/OpenRV-annotation/assets/brushes/",
-    "deps/OpenRV-annotation/assets/shaders/",
+    "deps/OpenRV-annotation/assets/",
     "dist/"
   ],
   "types": "./annotation_platform.d.ts",
