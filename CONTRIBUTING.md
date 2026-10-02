@@ -124,29 +124,28 @@ The workflow verifies the tag matches `package.json`'s version before
 publishing, so a mismatched tag fails the run instead of publishing the
 wrong version.
 
-### Setting up your local environment to publish automatically
+### Setting up your local environment to publish manually
 
-The package is scoped (`@aswf/annotation-platform`), so npm lets you
-pin that scope to the right registry once, in your user-level `~/.npmrc`,
-instead of passing `REGISTRY` on every `make publish`:
+The package is published publicly under the
+[`aswf` organization on npmjs.com](https://www.npmjs.com/org/aswf) as
+`@aswf/annotation-platform`. The registry and public access are pinned via
+`publishConfig` in `package.json`, so you only need to be a member of the
+`aswf` org with publish rights and have an auth token in your user-level
+`~/.npmrc`:
 
 ```
-@aswf:registry=https://registry.npmjs.org
 //registry.npmjs.org/:_authToken=<your-token>
 ```
 
-With that in place, a plain `make publish` (no `REGISTRY` override) resolves
-the `@aswf` scope to the configured registry automatically, and
-authenticates using the stored token.
+With that in place, a plain `make publish` publishes to npmjs.com.
 
-### Publishing manually to a specific registry
+### Publishing to a different registry
 
-`make publish` normally publishes to whatever registry is configured in your
-local npm setup. To target a different registry (e.g. the public npm
-registry instead of a private mirror), pass `REGISTRY`:
+To target a different registry (e.g. a local test registry), pass
+`REGISTRY`:
 
 ```bash
-make publish REGISTRY=https://registry.npmjs.org
+make publish REGISTRY=http://localhost:4873
 ```
 
 ### Recovering from a version mismatch

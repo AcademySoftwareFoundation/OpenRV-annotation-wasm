@@ -1,6 +1,10 @@
 {
   "name": "@aswf/openrv-annotation-wasm",
   "version": "0.3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AcademySoftwareFoundation/OpenRV-annotation-wasm.git"
+  },
   "main": "./dist/annotation_platform.cjs.js",
   "exports": {
     ".": {
@@ -16,6 +20,10 @@
     "dist/"
   ],
   "types": "./annotation_platform.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build:wasm": "make wasm",
     "build": "mkdir -p dist && cp build-wasm/bindings/wasm/annotation_platform.cjs.js dist/ && cp build-wasm/bindings/wasm/annotation_platform.esm.mjs dist/",
