@@ -126,7 +126,7 @@ wrong version.
 
 ### Setting up your local environment to publish automatically
 
-The package is scoped (`@aswf/openrv-annotation-wasm`), so npm lets you
+The package is scoped (`@aswf/annotation-platform`), so npm lets you
 pin that scope to the right registry once, in your user-level `~/.npmrc`,
 instead of passing `REGISTRY` on every `make publish`:
 
@@ -152,7 +152,7 @@ make publish REGISTRY=https://registry.npmjs.org
 ### Recovering from a version mismatch
 
 If the version-check step fails, the job stops before `make publish` runs, so
-nothing is published to NPM — it's safe to fix and retry.
+nothing is published to NPM. It's safe to fix and retry.
 
 1. Figure out which one was wrong: the tag or `package.json`.
 2. **If `package.json` was wrong** (you forgot to bump it): delete the bad
