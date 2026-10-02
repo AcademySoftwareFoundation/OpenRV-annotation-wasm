@@ -1,5 +1,5 @@
 {
-  "name": "@aswf/openrv-annotation-wasm",
+  "name": "@aswf/annotation-platform",
   "version": "0.3.0",
   "repository": {
     "type": "git",
