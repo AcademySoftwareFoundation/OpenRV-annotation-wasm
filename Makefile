@@ -1,6 +1,6 @@
 SHELL := bash
 .PHONY: all configure build clean wasm emsdk-install test \
-        npm-install format format-check coverage install-hooks publish
+        npm-install format format-check coverage install-hooks publish publish-stage
 
 BUILD_DIR      := build
 WASM_BUILD_DIR := build-wasm
@@ -81,11 +81,18 @@ coverage: npm-install wasm
 # ── Publishing ────────────────────────────────────────────────────────────────
 # Override the target registry for a manual publish, e.g.:
 #   make publish REGISTRY=https://registry.npmjs.org
+#
+# publish-stage uploads the release to npm's stage queue instead, where a
+# maintainer must approve it (with 2FA) before it goes live. Used by CI.
 
 REGISTRY :=
 
 publish: wasm
 	npm publish $(if $(REGISTRY),--registry=$(REGISTRY))
+
+publish-stage: wasm
+	npm run build
+	npm stage publish $(if $(REGISTRY),--registry=$(REGISTRY))
 
 # ── Git hooks ─────────────────────────────────────────────────────────────────
 

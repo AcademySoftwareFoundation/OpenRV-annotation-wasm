@@ -113,13 +113,21 @@ The package is published publicly as
 [`@aswf/annotation-platform`](https://www.npmjs.com/package/@aswf/annotation-platform)
 under the [`aswf` organization on npmjs.com](https://www.npmjs.com/org/aswf).
 
-Publishing is automated via `.github/workflows/publish.yml`, which runs
-`make publish` whenever a tag matching `vX.Y.Z` is pushed. The workflow
+Releases are built by `.github/workflows/publish.yml`, which runs
+`make publish-stage` whenever a tag matching `vX.Y.Z` is pushed. The workflow
 authenticates with npm
 [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so no
 npm token is stored in the repository, and every release gets a
 [provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
-linking it to the commit and workflow run that built it. To cut a release:
+linking it to the commit and workflow run that built it.
+
+The workflow does not publish directly. It uses
+[staged publishing](https://docs.npmjs.com/staged-publishing/): the release is
+uploaded to npm's stage queue, and a maintainer has to approve it with 2FA
+before it becomes installable. A compromised workflow or a bad tag can't put
+a version in front of users without that approval.
+
+To cut a release:
 
 1. Bump the `version` field in `package.json` to `X.Y.Z`, following
    [Semantic Versioning](https://semver.org): bump `X` (major) for breaking
@@ -131,10 +139,23 @@ linking it to the commit and workflow run that built it. To cut a release:
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
+4. Wait for the Publish workflow to finish. Its run summary confirms the
+   version was staged.
+5. Approve the staged version. npm does not reliably send a notification, so
+   do this right after the workflow finishes. Either:
+   - on npmjs.com, open the package's **Staged Packages** tab, review the
+     version and click **Approve**, or
+   - from the CLI (npm 11.15.0 or later):
+     ```bash
+     npm stage list
+     npm stage view <stage-id>      # inspect the staged version
+     npm stage approve <stage-id>   # prompts for your 2FA code
+     ```
+   If something looks wrong, run `npm stage reject <stage-id>` instead.
 
 The workflow verifies the tag matches `package.json`'s version before
-publishing, so a mismatched tag fails the run instead of publishing the
-wrong version.
+staging, so a mismatched tag fails the run instead of staging the wrong
+version.
 
 ### Trusted publisher configuration
 
@@ -147,8 +168,12 @@ Trusted publishing is configured on npmjs.com under the package's
 | Repository        | `OpenRV-annotation-wasm`    |
 | Workflow filename | `publish.yml`               |
 
+Under allowed actions, leave **Allow npm publish** and **Allow npm dist-tag**
+unchecked, so the trusted publisher is stage-only. The workflow can then
+only stage releases, never publish them directly.
+
 If the workflow file is renamed, this setting must be updated to match or
-publishing will fail with an authentication error.
+the workflow will fail with an authentication error.
 
 ### Publishing manually
 
@@ -168,7 +193,7 @@ make publish            # prompts for your 2FA code
 ```
 
 Don't push a `vX.Y.Z` tag for a version you published manually: the workflow
-would try to publish it again and fail.
+would try to stage it again and fail.
 
 ### Publishing to a different registry
 
@@ -181,8 +206,8 @@ make publish REGISTRY=http://localhost:4873
 
 ### Recovering from a version mismatch
 
-If the version-check step fails, the job stops before `make publish` runs, so
-nothing is published to NPM. It's safe to fix and retry.
+If the version-check step fails, the job stops before `make publish-stage`
+runs, so nothing is staged or published. It's safe to fix and retry.
 
 1. Figure out which one was wrong: the tag or `package.json`.
 2. **If `package.json` was wrong** (you forgot to bump it): delete the bad
@@ -204,13 +229,11 @@ nothing is published to NPM. It's safe to fix and retry.
    ```
 
 Pushing the tag again re-triggers the workflow, which re-runs the version
-check and, if it now matches, proceeds to build and publish.
+check and, if it now matches, proceeds to build and stage.
 
-Note: if a version was already successfully published to NPM before you
-noticed a mismatch on a different tag, that version can't be republished —
-NPM rejects republishing an identical version. Since the version check runs
-before publish, a rejected run never reaches NPM, so this shouldn't arise
-from this workflow alone.
+Note: once a version has been approved and published, it can't be
+republished — npm rejects republishing an identical version. If you spot a
+problem while the version is still staged, reject it instead of approving it.
 
 ## Bug reports and feature requests
 
