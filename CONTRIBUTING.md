@@ -109,8 +109,17 @@ pull request in that repository instead.
 
 ## Releasing
 
-Publishing to NPM is automated via `.github/workflows/publish.yml`, which runs
-`make publish` whenever a tag matching `vX.Y.Z` is pushed. To cut a release:
+The package is published publicly as
+[`@aswf/annotation-platform`](https://www.npmjs.com/package/@aswf/annotation-platform)
+under the [`aswf` organization on npmjs.com](https://www.npmjs.com/org/aswf).
+
+Publishing is automated via `.github/workflows/publish.yml`, which runs
+`make publish` whenever a tag matching `vX.Y.Z` is pushed. The workflow
+authenticates with npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so no
+npm token is stored in the repository, and every release gets a
+[provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
+linking it to the commit and workflow run that built it. To cut a release:
 
 1. Bump the `version` field in `package.json` to `X.Y.Z`.
 2. Commit and merge that change to `main`.
@@ -124,20 +133,39 @@ The workflow verifies the tag matches `package.json`'s version before
 publishing, so a mismatched tag fails the run instead of publishing the
 wrong version.
 
-### Setting up your local environment to publish manually
+### Trusted publisher configuration
 
-The package is published publicly under the
-[`aswf` organization on npmjs.com](https://www.npmjs.com/org/aswf) as
-`@aswf/annotation-platform`. The registry and public access are pinned via
-`publishConfig` in `package.json`, so you only need to be a member of the
-`aswf` org with publish rights and have an auth token in your user-level
-`~/.npmrc`:
+Trusted publishing is configured on npmjs.com under the package's
+**Settings → Trusted Publisher** (GitHub Actions):
 
+| Field             | Value                       |
+| ----------------- | --------------------------- |
+| Organization      | `AcademySoftwareFoundation` |
+| Repository        | `OpenRV-annotation-wasm`    |
+| Workflow filename | `publish.yml`               |
+
+If the workflow file is renamed, this setting must be updated to match or
+publishing will fail with an authentication error.
+
+### Publishing manually
+
+Manual publishing should only be needed in exceptional cases (e.g. the very
+first release, before trusted publishing could be configured). Releases
+published manually do not get a provenance attestation.
+
+The registry and public access are pinned via `publishConfig` in
+`package.json`. You need to be a member of the `aswf` org with publish
+rights:
+
+```bash
+npm login
+make wasm && npm run build
+npm publish --dry-run   # review the package contents
+make publish            # prompts for your 2FA code
 ```
-//registry.npmjs.org/:_authToken=<your-token>
-```
 
-With that in place, a plain `make publish` publishes to npmjs.com.
+Don't push a `vX.Y.Z` tag for a version you published manually: the workflow
+would try to publish it again and fail.
 
 ### Publishing to a different registry
 
