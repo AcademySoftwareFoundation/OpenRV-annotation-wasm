@@ -121,7 +121,10 @@ npm token is stored in the repository, and every release gets a
 [provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
 linking it to the commit and workflow run that built it. To cut a release:
 
-1. Bump the `version` field in `package.json` to `X.Y.Z`.
+1. Bump the `version` field in `package.json` to `X.Y.Z`, following
+   [Semantic Versioning](https://semver.org): bump `X` (major) for breaking
+   API changes, `Y` (minor) for backward-compatible features, and `Z` (patch)
+   for backward-compatible fixes.
 2. Commit and merge that change to `main`.
 3. Tag the merge commit and push the tag:
    ```bash
