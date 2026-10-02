@@ -107,6 +107,111 @@ Formatter configs:
 For changes to the core geometry library (TwkPaint, TwkMath), please open a
 pull request in that repository instead.
 
+## Releasing
+
+The package is published publicly as
+[`@aswf/annotation-platform`](https://www.npmjs.com/package/@aswf/annotation-platform)
+under the [`aswf` organization on npmjs.com](https://www.npmjs.com/org/aswf).
+
+Publishing is automated via `.github/workflows/publish.yml`, which runs
+`make publish` whenever a tag matching `vX.Y.Z` is pushed. The workflow
+authenticates with npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so no
+npm token is stored in the repository, and every release gets a
+[provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
+linking it to the commit and workflow run that built it. To cut a release:
+
+1. Bump the `version` field in `package.json` to `X.Y.Z`, following
+   [Semantic Versioning](https://semver.org): bump `X` (major) for breaking
+   API changes, `Y` (minor) for backward-compatible features, and `Z` (patch)
+   for backward-compatible fixes.
+2. Commit and merge that change to `main`.
+3. Tag the merge commit and push the tag:
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The workflow verifies the tag matches `package.json`'s version before
+publishing, so a mismatched tag fails the run instead of publishing the
+wrong version.
+
+### Trusted publisher configuration
+
+Trusted publishing is configured on npmjs.com under the package's
+**Settings → Trusted Publisher** (GitHub Actions):
+
+| Field             | Value                       |
+| ----------------- | --------------------------- |
+| Organization      | `AcademySoftwareFoundation` |
+| Repository        | `OpenRV-annotation-wasm`    |
+| Workflow filename | `publish.yml`               |
+
+If the workflow file is renamed, this setting must be updated to match or
+publishing will fail with an authentication error.
+
+### Publishing manually
+
+Manual publishing should only be needed in exceptional cases (e.g. the very
+first release, before trusted publishing could be configured). Releases
+published manually do not get a provenance attestation.
+
+The registry and public access are pinned via `publishConfig` in
+`package.json`. You need to be a member of the `aswf` org with publish
+rights:
+
+```bash
+npm login
+make wasm && npm run build
+npm publish --dry-run   # review the package contents
+make publish            # prompts for your 2FA code
+```
+
+Don't push a `vX.Y.Z` tag for a version you published manually: the workflow
+would try to publish it again and fail.
+
+### Publishing to a different registry
+
+To target a different registry (e.g. a local test registry), pass
+`REGISTRY`:
+
+```bash
+make publish REGISTRY=http://localhost:4873
+```
+
+### Recovering from a version mismatch
+
+If the version-check step fails, the job stops before `make publish` runs, so
+nothing is published to NPM. It's safe to fix and retry.
+
+1. Figure out which one was wrong: the tag or `package.json`.
+2. **If `package.json` was wrong** (you forgot to bump it): delete the bad
+   tag, fix the version, commit, then re-tag.
+   ```bash
+   git tag -d vX.Y.Z
+   git push origin :refs/tags/vX.Y.Z   # delete remote tag
+   # bump package.json version to X.Y.Z, commit, push to main
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+3. **If the tag was wrong** (e.g. you tagged the wrong version number): just
+   delete it and re-tag with the correct one — no code change needed.
+   ```bash
+   git tag -d vBadTag
+   git push origin :refs/tags/vBadTag
+   git tag vCorrectTag
+   git push origin vCorrectTag
+   ```
+
+Pushing the tag again re-triggers the workflow, which re-runs the version
+check and, if it now matches, proceeds to build and publish.
+
+Note: if a version was already successfully published to NPM before you
+noticed a mismatch on a different tag, that version can't be republished —
+NPM rejects republishing an identical version. Since the version check runs
+before publish, a rejected run never reaches NPM, so this shouldn't arise
+from this workflow alone.
+
 ## Bug reports and feature requests
 
 Please open a [GitHub Issue](https://github.com/AcademySoftwareFoundation/OpenRV-annotation-wasm/issues).
