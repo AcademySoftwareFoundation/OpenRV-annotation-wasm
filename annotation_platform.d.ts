@@ -177,8 +177,14 @@ export interface AnnotationPlatformModule {
     StampPlacer: StampPlacerConstructor;
     JoinStyle: JoinStyleEnum;
     CapStyle: CapStyleEnum;
-    /** FNV-1a 32-bit seed from an annotation id (e.g. OTIO Paint.2 uuid). */
-    seedFromAnnotationId(id: string): number;
+    
+    /**
+     * Stable FNV-1a 32-bit hash of `id`. Same input always produces the
+     * same output, on any platform. Useful for deriving a deterministic
+     * `StampPlacer` seed from a string identifier (e.g. an OTIO Paint.2
+     * uuid), so jitter is reproducible across re-renders.
+     */
+    hashU32(id: string): number;
 }
 
 declare function AnnotationPlatform(): Promise<AnnotationPlatformModule>;

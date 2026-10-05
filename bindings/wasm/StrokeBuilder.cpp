@@ -1,7 +1,7 @@
+#include <TwkMath/Hash.h>
 #include <TwkPaint/Path.h>
 #include <TwkPaint/Smoother.h>
 #include <TwkPaint/StampPath.h>
-#include <TwkPaint/StampSeed.h>
 #include <cstdint>
 #include <emscripten/bind.h>
 #include <optional>
@@ -242,9 +242,12 @@ class StampPlacer
     std::vector<float> m_output;
 };
 
-uint32_t seedFromAnnotationId(const std::string& id)
+// FNV-1a 32-bit hash of @a id. Stable across platforms/processes — useful
+// for deriving a deterministic StampPlacer seed from a string identifier
+// (e.g. an OTIO Paint.2 uuid), so jitter is reproducible across re-renders.
+uint32_t hashU32(const std::string& id)
 {
-    return TwkPaint::seed_from_annotation_id(id);
+    return TwkMath::hash_u32(id);
 }
 
 EMSCRIPTEN_BINDINGS(annotation_platform)
@@ -294,5 +297,5 @@ EMSCRIPTEN_BINDINGS(annotation_platform)
                                                 float, float, float, bool, uint32_t)>(
                      &StampPlacer::reset));
 
-    function("seedFromAnnotationId", &seedFromAnnotationId);
+    function("hashU32", &hashU32);
 }

@@ -270,16 +270,15 @@ export function runWasmSmokeTests(Module) {
     );
     placerCustom.delete();
 
-    section('seedFromAnnotationId');
+    section('hashU32');
     const knownId = '83c35327-acf3-489e-b456-d13064d84aa5';
     check(
-        'seedFromAnnotationId returns stable uint32 for known UUID',
-        Module.seedFromAnnotationId(knownId) === 3213262474,
+        'hashU32 returns stable uint32 for known string',
+        Module.hashU32(knownId) === 3213262474,
     );
     check(
-        'seedFromAnnotationId differs for different ids',
-        Module.seedFromAnnotationId(knownId) !==
-            Module.seedFromAnnotationId('4dd676c6-9ffa-4fd4-930d-5f37c8a0bb8d'),
+        'hashU32 differs for different strings',
+        Module.hashU32(knownId) !== Module.hashU32('4dd676c6-9ffa-4fd4-930d-5f37c8a0bb8d'),
     );
 
     section('StampPlacer: seeded jitter is deterministic');
@@ -295,7 +294,7 @@ export function runWasmSmokeTests(Module) {
         0.5,
         45.0,
         false,
-        Module.seedFromAnnotationId(knownId),
+        Module.hashU32(knownId),
     ];
     const placerA = new Module.StampPlacer(...seededParams);
     placerA.addPoint(0.0, 0.0);
