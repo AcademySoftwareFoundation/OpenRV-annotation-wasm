@@ -270,6 +270,52 @@ export function runWasmSmokeTests(Module) {
     );
     placerCustom.delete();
 
+    section('seedFromAnnotationId');
+    const knownId = '83c35327-acf3-489e-b456-d13064d84aa5';
+    check(
+        'seedFromAnnotationId returns stable uint32 for known UUID',
+        Module.seedFromAnnotationId(knownId) === 3213262474,
+    );
+    check(
+        'seedFromAnnotationId differs for different ids',
+        Module.seedFromAnnotationId(knownId) !==
+            Module.seedFromAnnotationId('4dd676c6-9ffa-4fd4-930d-5f37c8a0bb8d'),
+    );
+
+    section('StampPlacer: seeded jitter is deterministic');
+    const seededParams = [
+        0.05,
+        0.8,
+        0.0,
+        1.0,
+        0.1,
+        1.0,
+        0.5,
+        0.5,
+        0.5,
+        45.0,
+        false,
+        Module.seedFromAnnotationId(knownId),
+    ];
+    const placerA = new Module.StampPlacer(...seededParams);
+    placerA.addPoint(0.0, 0.0);
+    placerA.addPoint(1.0, 0.0, -1, -1, -1, -1);
+    const stampsA = placerA.getStamps();
+
+    const placerB = new Module.StampPlacer(...seededParams);
+    placerB.addPoint(0.0, 0.0);
+    placerB.addPoint(1.0, 0.0, -1, -1, -1, -1);
+    const stampsB = placerB.getStamps();
+
+    check('seeded placers produce the same stamp count', stampsA.length === stampsB.length);
+    check(
+        'seeded placers produce identical stamp buffers',
+        stampsA.length > 0 &&
+            Array.from(stampsA).every((value, index) => value === stampsB[index]),
+    );
+    placerA.delete();
+    placerB.delete();
+
     section('Memory management');
     placer.delete();
     check('placer.delete() does not throw', true);

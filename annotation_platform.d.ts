@@ -84,6 +84,21 @@ export interface StampPlacer {
         rotationJitter: number,
         rotateToStroke: boolean,
     ): void;
+    /** Reset placement state with a deterministic jitter seed. */
+    reset(
+        radius: number,
+        opacity: number,
+        angle: number,
+        squish: number,
+        spacing: number,
+        spacingBias: number,
+        spacingJitter: number,
+        opacityJitter: number,
+        radiusJitter: number,
+        rotationJitter: number,
+        rotateToStroke: boolean,
+        seed: number,
+    ): void;
     /** Must be called when done to free C++ memory. */
     delete(): void;
 }
@@ -134,6 +149,23 @@ export interface StampPlacerConstructor {
         rotateToStroke: boolean,
     ): StampPlacer;
     /**
+     * Same as the 11-parameter constructor, with a deterministic jitter seed (uint32).
+     */
+    new (
+        radius: number,
+        opacity: number,
+        angle: number,
+        squish: number,
+        spacing: number,
+        spacingBias: number,
+        spacingJitter: number,
+        opacityJitter: number,
+        radiusJitter: number,
+        rotationJitter: number,
+        rotateToStroke: boolean,
+        seed: number,
+    ): StampPlacer;
+    /**
      * Constructor without parameters, uses default values.
      */
     new (): StampPlacer;
@@ -145,6 +177,8 @@ export interface AnnotationPlatformModule {
     StampPlacer: StampPlacerConstructor;
     JoinStyle: JoinStyleEnum;
     CapStyle: CapStyleEnum;
+    /** FNV-1a 32-bit seed from an annotation id (e.g. OTIO Paint.2 uuid). */
+    seedFromAnnotationId(id: string): number;
 }
 
 declare function AnnotationPlatform(): Promise<AnnotationPlatformModule>;
