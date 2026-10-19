@@ -272,10 +272,7 @@ export function runWasmSmokeTests(Module) {
 
     section('hashU32');
     const knownId = '83c35327-acf3-489e-b456-d13064d84aa5';
-    check(
-        'hashU32 returns stable uint32 for known string',
-        Module.hashU32(knownId) === 3213262474,
-    );
+    check('hashU32 returns stable uint32 for known string', Module.hashU32(knownId) === 3213262474);
     check(
         'hashU32 differs for different strings',
         Module.hashU32(knownId) !== Module.hashU32('4dd676c6-9ffa-4fd4-930d-5f37c8a0bb8d'),
@@ -309,8 +306,7 @@ export function runWasmSmokeTests(Module) {
     check('seeded placers produce the same stamp count', stampsA.length === stampsB.length);
     check(
         'seeded placers produce identical stamp buffers',
-        stampsA.length > 0 &&
-            Array.from(stampsA).every((value, index) => value === stampsB[index]),
+        stampsA.length > 0 && Array.from(stampsA).every((value, index) => value === stampsB[index]),
     );
     placerA.delete();
     placerB.delete();

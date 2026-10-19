@@ -177,7 +177,7 @@ export interface AnnotationPlatformModule {
     StampPlacer: StampPlacerConstructor;
     JoinStyle: JoinStyleEnum;
     CapStyle: CapStyleEnum;
-    
+
     /**
      * Stable FNV-1a 32-bit hash of `id`. Same input always produces the
      * same output, on any platform. Useful for deriving a deterministic

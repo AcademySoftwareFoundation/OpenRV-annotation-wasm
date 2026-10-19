@@ -147,19 +147,18 @@ class StampPlacer
         : m_placer(TwkPaint::BrushParams{})
     {}
 
-    explicit StampPlacer(
-        float radius, float opacity, float angle, float squish,
-        float spacing, // pass 0 to use PaintCore default spacing (make_dist_)
-        float spacingBias, float spacingJitter, float opacityJitter, float radiusJitter,
-        float rotationJitter, bool rotateToStroke)
+    explicit StampPlacer(float radius, float opacity, float angle, float squish,
+                         float spacing, // pass 0 to use default spacing
+                         float spacingBias, float spacingJitter, float opacityJitter,
+                         float radiusJitter, float rotationJitter, bool rotateToStroke)
         : m_placer(makeParams(radius, opacity, angle, squish, spacing, spacingBias, spacingJitter,
                               opacityJitter, radiusJitter, rotationJitter, rotateToStroke))
     {}
 
-    explicit StampPlacer(
-        float radius, float opacity, float angle, float squish, float spacing, float spacingBias,
-        float spacingJitter, float opacityJitter, float radiusJitter, float rotationJitter,
-        bool rotateToStroke, uint32_t seed)
+    explicit StampPlacer(float radius, float opacity, float angle, float squish, float spacing,
+                         float spacingBias, float spacingJitter, float opacityJitter,
+                         float radiusJitter, float rotationJitter, bool rotateToStroke,
+                         uint32_t seed)
         : m_placer(makeParams(radius, opacity, angle, squish, spacing, spacingBias, spacingJitter,
                               opacityJitter, radiusJitter, rotationJitter, rotateToStroke, seed))
     {}
@@ -293,9 +292,9 @@ EMSCRIPTEN_BINDINGS(annotation_platform)
         .function("reset", select_overload<void()>(&StampPlacer::reset))
         .function("reset", select_overload<void(float, float, float, float, float, float, float,
                                                 float, float, float, bool)>(&StampPlacer::reset))
-        .function("reset", select_overload<void(float, float, float, float, float, float, float,
-                                                float, float, float, bool, uint32_t)>(
-                     &StampPlacer::reset));
+        .function("reset",
+                  select_overload<void(float, float, float, float, float, float, float, float,
+                                       float, float, bool, uint32_t)>(&StampPlacer::reset));
 
     function("hashU32", &hashU32);
 }
