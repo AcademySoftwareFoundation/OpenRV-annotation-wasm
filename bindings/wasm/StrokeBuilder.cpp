@@ -241,7 +241,7 @@ class StampPlacer
     std::vector<float> m_output;
 };
 
-// FNV-1a 32-bit hash of @a id. Stable across platforms/processes — useful
+// Stable 32-bit hash of a byte string — useful
 // for deriving a deterministic StampPlacer seed from a string identifier
 // (e.g. an OTIO Paint.2 uuid), so jitter is reproducible across re-renders.
 uint32_t hashU32(const std::string& id)
