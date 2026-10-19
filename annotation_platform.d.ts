@@ -129,7 +129,7 @@ export interface StampPlacerConstructor {
      * @param squish         default 1   — aspect ratio [0..1], 1 = circle
      * @param spacing        default 0   — if > 0, overrides proportional default (radius * 0.5 * spacingBias)
      * @param spacingBias    default 1   — multiplier on computed inter-stamp spacing
-     * @param spacingJitter  default 0   — random spacing variation [0..1]
+     * @param spacingJitter  default 0   — random spacing variation [0..1], ignored if spacing is != 0
      * @param opacityJitter  default 0   — random opacity variation [0..1]
      * @param radiusJitter   default 0   — random radius variation [0..1]
      * @param rotationJitter default 0   — random angle per stamp (degrees)
