@@ -84,6 +84,21 @@ export interface StampPlacer {
         rotationJitter: number,
         rotateToStroke: boolean,
     ): void;
+    /** Reset placement state with a deterministic jitter seed. */
+    reset(
+        radius: number,
+        opacity: number,
+        angle: number,
+        squish: number,
+        spacing: number,
+        spacingBias: number,
+        spacingJitter: number,
+        opacityJitter: number,
+        radiusJitter: number,
+        rotationJitter: number,
+        rotateToStroke: boolean,
+        seed: number,
+    ): void;
     /** Must be called when done to free C++ memory. */
     delete(): void;
 }
@@ -114,7 +129,7 @@ export interface StampPlacerConstructor {
      * @param squish         default 1   — aspect ratio [0..1], 1 = circle
      * @param spacing        default 0   — if > 0, overrides proportional default (radius * 0.5 * spacingBias)
      * @param spacingBias    default 1   — multiplier on computed inter-stamp spacing
-     * @param spacingJitter  default 0   — random spacing variation [0..1]
+     * @param spacingJitter  default 0   — random spacing variation [0..1], ignored if spacing is != 0
      * @param opacityJitter  default 0   — random opacity variation [0..1]
      * @param radiusJitter   default 0   — random radius variation [0..1]
      * @param rotationJitter default 0   — random angle per stamp (degrees)
@@ -134,6 +149,23 @@ export interface StampPlacerConstructor {
         rotateToStroke: boolean,
     ): StampPlacer;
     /**
+     * Same as the 11-parameter constructor, with a deterministic jitter seed (uint32).
+     */
+    new (
+        radius: number,
+        opacity: number,
+        angle: number,
+        squish: number,
+        spacing: number,
+        spacingBias: number,
+        spacingJitter: number,
+        opacityJitter: number,
+        radiusJitter: number,
+        rotationJitter: number,
+        rotateToStroke: boolean,
+        seed: number,
+    ): StampPlacer;
+    /**
      * Constructor without parameters, uses default values.
      */
     new (): StampPlacer;
@@ -145,6 +177,14 @@ export interface AnnotationPlatformModule {
     StampPlacer: StampPlacerConstructor;
     JoinStyle: JoinStyleEnum;
     CapStyle: CapStyleEnum;
+
+    /**
+     * Stable FNV-1a 32-bit hash of `id`. Same input always produces the
+     * same output, on any platform. Useful for deriving a deterministic
+     * `StampPlacer` seed from a string identifier (e.g. an OTIO Paint.2
+     * uuid), so jitter is reproducible across re-renders.
+     */
+    hashU32(id: string): number;
 }
 
 declare function AnnotationPlatform(): Promise<AnnotationPlatformModule>;

@@ -1,8 +1,11 @@
+#include <TwkMath/Hash.h>
 #include <TwkPaint/Path.h>
 #include <TwkPaint/Smoother.h>
 #include <TwkPaint/StampPath.h>
 #include <cstdint>
 #include <emscripten/bind.h>
+#include <optional>
+#include <string>
 #include <vector>
 
 using namespace emscripten;
@@ -144,13 +147,20 @@ class StampPlacer
         : m_placer(TwkPaint::BrushParams{})
     {}
 
-    explicit StampPlacer(
-        float radius, float opacity, float angle, float squish,
-        float spacing, // pass 0 to use proportional default (radius * 0.5 * spacingBias)
-        float spacingBias, float spacingJitter, float opacityJitter, float radiusJitter,
-        float rotationJitter, bool rotateToStroke)
+    explicit StampPlacer(float radius, float opacity, float angle, float squish,
+                         float spacing, // pass 0 to use default spacing
+                         float spacingBias, float spacingJitter, float opacityJitter,
+                         float radiusJitter, float rotationJitter, bool rotateToStroke)
         : m_placer(makeParams(radius, opacity, angle, squish, spacing, spacingBias, spacingJitter,
                               opacityJitter, radiusJitter, rotationJitter, rotateToStroke))
+    {}
+
+    explicit StampPlacer(float radius, float opacity, float angle, float squish, float spacing,
+                         float spacingBias, float spacingJitter, float opacityJitter,
+                         float radiusJitter, float rotationJitter, bool rotateToStroke,
+                         uint32_t seed)
+        : m_placer(makeParams(radius, opacity, angle, squish, spacing, spacingBias, spacingJitter,
+                              opacityJitter, radiusJitter, rotationJitter, rotateToStroke, seed))
     {}
 
     // Feed one (smoothed) input point, optionally with per-point overrides.
@@ -194,11 +204,22 @@ class StampPlacer
         m_output.clear();
     }
 
+    void reset(float radius, float opacity, float angle, float squish, float spacing,
+               float spacingBias, float spacingJitter, float opacityJitter, float radiusJitter,
+               float rotationJitter, bool rotateToStroke, uint32_t seed)
+    {
+        m_placer.reset(makeParams(radius, opacity, angle, squish, spacing, spacingBias,
+                                  spacingJitter, opacityJitter, radiusJitter, rotationJitter,
+                                  rotateToStroke, seed));
+        m_output.clear();
+    }
+
   private:
     static TwkPaint::BrushParams makeParams(float radius, float opacity, float angle, float squish,
                                             float spacing, float spacingBias, float spacingJitter,
                                             float opacityJitter, float radiusJitter,
-                                            float rotationJitter, bool rotateToStroke)
+                                            float rotationJitter, bool rotateToStroke,
+                                            std::optional<uint32_t> seed = std::nullopt)
     {
         TwkPaint::BrushParams p;
         p.radius         = radius;
@@ -212,12 +233,21 @@ class StampPlacer
         p.radiusJitter   = radiusJitter;
         p.rotationJitter = rotationJitter;
         p.rotateToStroke = rotateToStroke;
+        p.seed           = seed;
         return p;
     }
 
     TwkPaint::StampPath m_placer;
     std::vector<float> m_output;
 };
+
+// Stable 32-bit hash of a byte string — useful
+// for deriving a deterministic StampPlacer seed from a string identifier
+// (e.g. an OTIO Paint.2 uuid), so jitter is reproducible across re-renders.
+uint32_t hashU32(const std::string& id)
+{
+    return TwkMath::hash_u32(id);
+}
 
 EMSCRIPTEN_BINDINGS(annotation_platform)
 {
@@ -252,6 +282,8 @@ EMSCRIPTEN_BINDINGS(annotation_platform)
     class_<StampPlacer>("StampPlacer")
         .constructor<>()
         .constructor<float, float, float, float, float, float, float, float, float, float, bool>()
+        .constructor<float, float, float, float, float, float, float, float, float, float, bool,
+                     uint32_t>()
         .function("addPoint", optional_override(
                                   [](StampPlacer& self, float x, float y) { self.addPoint(x, y); }))
         .function("addPoint", &StampPlacer::addPoint)
@@ -259,5 +291,10 @@ EMSCRIPTEN_BINDINGS(annotation_platform)
         .function("getStampCount", &StampPlacer::getStampCount)
         .function("reset", select_overload<void()>(&StampPlacer::reset))
         .function("reset", select_overload<void(float, float, float, float, float, float, float,
-                                                float, float, float, bool)>(&StampPlacer::reset));
+                                                float, float, float, bool)>(&StampPlacer::reset))
+        .function("reset",
+                  select_overload<void(float, float, float, float, float, float, float, float,
+                                       float, float, bool, uint32_t)>(&StampPlacer::reset));
+
+    function("hashU32", &hashU32);
 }
