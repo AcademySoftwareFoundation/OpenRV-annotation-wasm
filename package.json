@@ -1,6 +1,10 @@
 {
   "name": "@aswf/annotation-platform",
   "version": "0.4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AcademySoftwareFoundation/OpenRV-annotation-wasm.git"
+  },
   "main": "./dist/annotation_platform.cjs.js",
   "exports": {
     ".": {
