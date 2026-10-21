@@ -143,7 +143,7 @@ Generates triangle geometry from a sequence of input points.
 
 ```javascript
 // ESM: import from dist/annotation_platform.esm.mjs (or package "import" export)
-// CJS: require('@autodesk/openrv-annotation-wasm') resolves dist/annotation_platform.cjs.js
+// CJS: require('@aswf/annotation-platform') resolves dist/annotation_platform.cjs.js
 import AnnotationPlatform from './dist/annotation_platform.esm.mjs';
 
 const Module = await AnnotationPlatform();
